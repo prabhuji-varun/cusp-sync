@@ -1,3 +1,10 @@
+if st.sidebar.button("🧹 Clear All Patient Data (Reset App)"):
+    st.session_state.patients = []
+    import os
+    if os.path.exists("patients_db.csv"):
+        os.remove("patients_db.csv")
+    st.success("All patient data cleared! Please refresh the page to start fresh.")
+
 # app.py  — CuspSync (Python Streamlit Edition)
 
 import streamlit as st
