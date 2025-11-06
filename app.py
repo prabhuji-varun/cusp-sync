@@ -140,14 +140,19 @@ if st.session_state.institute is None:
     name=st.text_input("Institution / College / Hospital Name")
     address=st.text_area("Address")
     banner=st.file_uploader("Upload Banner (PNG/JPG)")
-    if st.button("Save & Continue"):
-        if name and address and banner:
-            data=banner.read()
-            b64=base64.b64encode(data).decode()
-            st.session_state.institute={"name":name,"address":address,"banner":b64}
-            st.experimental_rerun()
-        else:
-            st.error("Please fill all fields and upload banner.")
+  if st.button("Save & Continue"):
+    if name and address and banner:
+        data = banner.read()
+        b64 = base64.b64encode(data).decode()
+        st.session_state.institute = {"name": name, "address": address, "banner": b64}
+        st.success("✅ Institution details saved! Please click below to proceed.")
+        st.stop()
+    else:
+        st.error("Please fill all fields and upload banner.")
+
+if st.session_state.institute:
+    if st.button("Continue to App"):
+        st.experimental_rerun()
     st.stop()
 
 inst=st.session_state.institute
