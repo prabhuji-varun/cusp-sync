@@ -205,8 +205,8 @@ elif tab=="History":
             line = f"{r['id']} - {r['name']} ({r['department']}) Rs. {r['Total']}"
             pdf.multi_cell(0, 8, line)
 
-        pdf_bytes = pdf.output(dest="S").encode("latin1", "ignore")
-        st.download_button("🖨 Download PDF", pdf_bytes, "patient_history.pdf")
+        pdf_bytes = pdf.output(dest="S").encode("latin1", "replace") if isinstance(pdf.output(dest="S"), str) else pdf.output(dest="S")
+        st.download_button("🖨 Download PDF", data=pdf_bytes, file_name="patient_history.pdf", mime="application/pdf")
 
 # ========= Doctor Dashboard =========
 elif tab=="Doctor Dashboard":
