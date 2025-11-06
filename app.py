@@ -156,11 +156,16 @@ if st.session_state.institute is None:
             st.experimental_rerun()
         st.stop()
 
-inst=st.session_state.institute
-if inst.get("banner"):
-    st.image(io.BytesIO(base64.b64decode(inst["banner"])),use_column_width=True)
-st.title(f"🏥 {inst['name']}")
-st.caption(inst["address"])
+inst = st.session_state.institute
+
+if inst is not None:
+    if inst.get("banner"):
+        st.image(io.BytesIO(base64.b64decode(inst["banner"])), use_column_width=True)
+    st.title(f"🏥 {inst.get('name', '')}")
+    st.caption(inst.get("address", ''))
+else:
+    st.warning("Please register your institution to proceed.")
+    st.stop()
 
 # ========= Register =========
 if tab=="Register":
