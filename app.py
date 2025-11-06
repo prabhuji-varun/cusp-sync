@@ -112,9 +112,6 @@ DEPARTMENT_TREATMENTS = {
 }
 
 # ========= State =========
-if "patients" not in st.session_state: st.session_state.patients=[]
-if "institute" not in st.session_state: st.session_state.institute=None
-
 # ========= Utility =========
 def gen_id():
     today=datetime.date.today().strftime("%Y%m%d")
@@ -129,6 +126,26 @@ def df_patients():
     df=pd.DataFrame(st.session_state.patients)
     df["Total"]=df["treatments"].apply(cost_total)
     return df
+
+DATA_FILE = "patients_data.csv"
+
+def load_patients():
+    try:
+        df = pd.read_csv(DATA_FILE)
+        df["treatments"] = df["treatments"].apply(lambda x: x.split("|") if isinstance(x, str) else [])
+        return df.to_dict(orient="records")
+    except FileNotFoundError:
+        return []
+
+def save_patients():
+    df = pd.DataFrame(st.session_state.patients)
+    if not df.empty:
+        df["treatments"] = df["treatments"].apply(lambda x: "|".join(x) if isinstance(x, list) else str(x))
+        df.to_csv(DATA_FILE, index=False)
+
+if "patients" not in st.session_state:
+    st.session_state.patients = load_patients()
+if "institute" not in st.session_state: st.session_state.institute=None
 
 # ========= Sidebar =========
 st.sidebar.title("🦷 CuspSync")
@@ -208,12 +225,14 @@ if tab == "Register":
                     "date": datetime.date.today().isoformat()
                 })
                 st.success(f"Patient {name} updated successfully!")
+                save_patients()
             else:
                 st.session_state.patients.insert(0, {
                     "id": gen_id(), "name": name, "age": age, "department": dept,
                     "doctor": doc, "treatments": treat, "date": datetime.date.today().isoformat()
                 })
                 st.success(f"New patient {name} registered successfully!")
+                save_patients()
 
 # ========= History =========
 elif tab=="History":
