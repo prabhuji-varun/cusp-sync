@@ -277,9 +277,15 @@ elif tab=="History":
         pdf.set_font("Helvetica", size=12)
 
         for _, r in df.iterrows():
-            # Replace special characters with ASCII-safe equivalents
-            line = f"{r['id']} - {r['name']} ({r['department']}) Rs. {r['Total']}"
-            pdf.multi_cell(0, 8, line)
+            text = f"{r['id']} - {r['name']} ({r['department']}) Rs. {r['Total']}"
+            # Remove non-ASCII characters and overly long text segments
+            safe_text = ''.join(ch if ord(ch) < 128 else '?' for ch in text)
+            if len(safe_text) > 200:
+                safe_text = safe_text[:200] + "..."
+            try:
+                pdf.multi_cell(0, 8, safe_text)
+            except Exception:
+                pdf.multi_cell(0, 8, "Data error: could not render line")
 
         pdf_output = pdf.output(dest="S")
         if isinstance(pdf_output, str):
