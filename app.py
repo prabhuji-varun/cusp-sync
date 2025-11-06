@@ -266,48 +266,6 @@ elif tab=="History":
         st.info("No patient records yet.")
     else:
         st.dataframe(df,use_container_width=True)
-        # Excel download
-        bio=io.BytesIO()
-        with pd.ExcelWriter(bio,engine="openpyxl") as w: df.to_excel(w,index=False)
-        st.download_button("📊 Download Excel",bio.getvalue(),
-            "patient_history.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-        from fpdf import FPDF
-
-        # PDF generation with built-in font and margins (no external font file required)
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-        pdf.set_font("Helvetica", size=12)
-        pdf.set_left_margin(10)
-        pdf.set_right_margin(10)
-
-        for _, r in df.iterrows():
-            text = f"{r['id']} - {r['name']} ({r['department']}) Rs. {r['Total']}"
-            # Remove or replace problematic characters
-            safe_text = ''.join(ch if 32 <= ord(ch) < 127 else ' ' for ch in text)
-            # Hard truncate to prevent width overflow
-            safe_text = safe_text[:150]
-            try:
-                pdf.multi_cell(0, 8, safe_text, align="L")
-            except Exception:
-                # Skip problematic line instead of writing fallback text
-                continue
-
-        pdf_output = pdf.output(dest="S")
-        if isinstance(pdf_output, str):
-            pdf_bytes = pdf_output.encode("latin1", "replace")
-        elif isinstance(pdf_output, (bytes, bytearray)):
-            pdf_bytes = bytes(pdf_output)
-        else:
-            pdf_bytes = b""
-
-        st.download_button(
-            "🖨 Download PDF",
-            data=pdf_bytes,
-            file_name="patient_history.pdf",
-            mime="application/pdf"
-        )
 
 # ========= Doctor Dashboard =========
 elif tab=="Doctor Dashboard":
