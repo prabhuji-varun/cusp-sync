@@ -166,21 +166,38 @@ st.caption(inst["address"])
 if tab=="Register":
     st.subheader("Register / Follow-up Patient")
     with st.form("register"):
-        name=st.text_input("Patient Name")
-        age=st.number_input("Age",0,120,25)
-        dept=st.selectbox("Department",DEPARTMENTS)
-        doc=st.selectbox("Doctor",DOCTORS[dept])
-        treat=st.multiselect("Treatments",DEPARTMENT_TREATMENTS[dept])
-        submit=st.form_submit_button("Register / Route")
+        pid = st.text_input("Patient ID (Leave blank for new patient)")
+        existing = next((p for p in st.session_state.patients if p["id"] == pid), None) if pid else None
+
+        if existing:
+            st.info(f"Existing patient found: {existing['name']}")
+            name = st.text_input("Patient Name", value=existing["name"])
+            age = st.number_input("Age", 0, 120, value=int(existing["age"]))
+            dept = st.selectbox("Department", DEPARTMENTS, index=DEPARTMENTS.index(existing["department"]))
+            doc = st.selectbox("Doctor", DOCTORS[dept], index=DOCTORS[dept].index(existing["doctor"]))
+            treat = st.multiselect("Treatments", DEPARTMENT_TREATMENTS[dept], default=existing["treatments"])
+        else:
+            name = st.text_input("Patient Name")
+            age = st.number_input("Age", 0, 120, 25)
+            dept = st.selectbox("Department", DEPARTMENTS)
+            doc = st.selectbox("Doctor", DOCTORS[dept])
+            treat = st.multiselect("Treatments", DEPARTMENT_TREATMENTS[dept])
+
+        submit = st.form_submit_button("Register / Route")
+
     if submit:
         if not (name and doc and treat):
             st.error("Please fill all required fields.")
         else:
-            st.session_state.patients.insert(0,{
-                "id":gen_id(),"name":name,"age":age,"department":dept,
-                "doctor":doc,"treatments":treat,"date":datetime.date.today().isoformat()
-            })
-            st.success(f"Patient {name} registered successfully!")
+            if existing:
+                existing.update({"age": age, "department": dept, "doctor": doc, "treatments": treat, "date": datetime.date.today().isoformat()})
+                st.success(f"Patient {name} updated successfully!")
+            else:
+                st.session_state.patients.insert(0, {
+                    "id": gen_id(), "name": name, "age": age, "department": dept,
+                    "doctor": doc, "treatments": treat, "date": datetime.date.today().isoformat()
+                })
+                st.success(f"New patient {name} registered successfully!")
 
 # ========= History =========
 elif tab=="History":
