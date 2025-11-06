@@ -284,13 +284,15 @@ elif tab=="History":
 
         for _, r in df.iterrows():
             text = f"{r['id']} - {r['name']} ({r['department']}) Rs. {r['Total']}"
-            safe_text = ''.join(ch if ord(ch) < 128 else '?' for ch in text)
-            if len(safe_text) > 200:
-                safe_text = safe_text[:200] + "..."
+            # Remove or replace problematic characters
+            safe_text = ''.join(ch if 32 <= ord(ch) < 127 else ' ' for ch in text)
+            # Hard truncate to prevent width overflow
+            safe_text = safe_text[:150]
             try:
                 pdf.multi_cell(0, 8, safe_text, align="L")
             except Exception:
-                pdf.multi_cell(0, 8, "Error rendering text line.", align="L")
+                # Skip problematic line instead of writing fallback text
+                continue
 
         pdf_output = pdf.output(dest="S")
         if isinstance(pdf_output, str):
