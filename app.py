@@ -119,12 +119,34 @@ def gen_id():
     return f"P{today}-{count+1:03d}"
 
 def cost_total(treats):
-    return sum(COSTS.get(t,0) for t in treats)
+    if isinstance(treats, list):
+        total = 0
+        for t in treats:
+            if isinstance(t, dict):
+                total += COSTS.get(t.get("name", ""), 0)
+            else:
+                total += COSTS.get(t, 0)
+        return total
+    return 0
 
 def df_patients():
-    if not st.session_state.patients: return pd.DataFrame()
-    df=pd.DataFrame(st.session_state.patients)
-    df["Total"]=df["treatments"].apply(cost_total)
+    records = []
+    for p in st.session_state.patients:
+        for t in p["treatments"]:
+            if isinstance(t, dict):
+                records.append({
+                    "id": p["id"],
+                    "name": p["name"],
+                    "age": p["age"],
+                    "department": p["department"],
+                    "doctor": t["doctor"],
+                    "treatment": t["name"],
+                    "cost": COSTS.get(t["name"], 0),
+                    "date": p["date"]
+                })
+    df = pd.DataFrame(records)
+    if not df.empty:
+        df["Total"] = df["cost"]
     return df
 
 DATA_FILE = "patients_data.csv"
@@ -133,14 +155,38 @@ def load_patients():
     try:
         df = pd.read_csv(DATA_FILE)
         df["treatments"] = df["treatments"].apply(lambda x: x.split("|") if isinstance(x, str) else [])
-        return df.to_dict(orient="records")
+        # Convert treatments list of strings to list of dicts with doctor info missing, fallback to empty doctor
+        # This is a backward compatibility step; existing data won't have doctor info per treatment
+        new_patients = []
+        for idx, row in df.iterrows():
+            treatments = []
+            for t in row["treatments"]:
+                if isinstance(t, dict):
+                    treatments.append(t)
+                else:
+                    treatments.append({"name": t, "doctor": ""})
+            new_patients.append({
+                "id": row["id"],
+                "name": row["name"],
+                "age": row["age"],
+                "department": row["department"],
+                "doctor": row.get("doctor", ""),  # legacy field
+                "treatments": treatments,
+                "date": row["date"]
+            })
+        return new_patients
     except FileNotFoundError:
         return []
 
 def save_patients():
     df = pd.DataFrame(st.session_state.patients)
     if not df.empty:
-        df["treatments"] = df["treatments"].apply(lambda x: "|".join(x) if isinstance(x, list) else str(x))
+        # Convert treatments list of dicts to string format for saving
+        def treatments_to_str(treatments):
+            if isinstance(treatments, list):
+                return "|".join(t.get("name", "") for t in treatments if isinstance(t, dict))
+            return str(treatments)
+        df["treatments"] = df["treatments"].apply(treatments_to_str)
         df.to_csv(DATA_FILE, index=False)
 
 if "patients" not in st.session_state:
@@ -211,7 +257,7 @@ if tab == "Register":
 
     # --- Step 5: Treatment dropdown dynamically updates ---
     treat_list = DEPARTMENT_TREATMENTS[dept]
-    treat_default = [t for t in (existing["treatments"] if existing else []) if t in treat_list]
+    treat_default = [t["name"] for t in (existing["treatments"] if existing else []) if t["name"] in treat_list] if existing else []
     treat = st.multiselect("Treatments", treat_list, default=treat_default, key="treat_live")
 
     # --- Step 6: Register / Update patient ---
@@ -221,7 +267,8 @@ if tab == "Register":
         else:
             if existing:
                 existing.update({
-                    "age": age, "department": dept, "doctor": doc, "treatments": treat,
+                    "age": age, "department": dept, "doctor": doc,
+                    "treatments": [{"name": t, "doctor": doc} for t in treat],
                     "date": datetime.date.today().isoformat()
                 })
                 st.success(f"Patient {name} updated successfully!")
@@ -229,7 +276,8 @@ if tab == "Register":
             else:
                 st.session_state.patients.insert(0, {
                     "id": gen_id(), "name": name, "age": age, "department": dept,
-                    "doctor": doc, "treatments": treat, "date": datetime.date.today().isoformat()
+                    "doctor": doc, "treatments": [{"name": t, "doctor": doc} for t in treat],
+                    "date": datetime.date.today().isoformat()
                 })
                 st.success(f"New patient {name} registered successfully!")
                 save_patients()
@@ -284,7 +332,7 @@ elif tab=="Doctor Dashboard":
         revenue=int(df_doc["Total"].sum())
         st.metric("Total Cases",total_cases)
         st.metric("Total Revenue (₹)",revenue)
-        st.bar_chart(df_doc.explode("treatments")["treatments"].value_counts())
+        st.bar_chart(df_doc["treatment"].value_counts())
 
 # ========= Department Dashboard =========
 elif tab=="Department Dashboard":
@@ -292,7 +340,7 @@ elif tab=="Department Dashboard":
     df=df_patients()
     if df.empty: st.info("No data yet.")
     else:
-        df_sum=df.groupby("department").agg(Cases=("id","count"),Revenue=("Total","sum"))
+        df_sum=df.groupby("department").agg(Cases=("id","count"),Revenue=("cost","sum"))
         st.bar_chart(df_sum)
         st.dataframe(df_sum)
 
