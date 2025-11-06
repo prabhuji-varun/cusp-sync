@@ -138,10 +138,10 @@ def df_patients():
                     "id": p["id"],
                     "name": p["name"],
                     "age": p["age"],
-                    "department": p["department"],
-                    "doctor": t["doctor"],
-                    "treatment": t["name"],
-                    "cost": COSTS.get(t["name"], 0),
+                    "department": t.get("department", p["department"]),
+                    "doctor": t.get("doctor", p["doctor"]),
+                    "treatment": t.get("name", ""),
+                    "cost": COSTS.get(t.get("name", ""), 0),
                     "date": p["date"]
                 })
     df = pd.DataFrame(records)
@@ -149,44 +149,20 @@ def df_patients():
         df["Total"] = df["cost"]
     return df
 
-DATA_FILE = "patients_data.csv"
+DATA_FILE = "patients_db.csv"
 
 def load_patients():
     try:
         df = pd.read_csv(DATA_FILE)
-        df["treatments"] = df["treatments"].apply(lambda x: x.split("|") if isinstance(x, str) else [])
-        # Convert treatments list of strings to list of dicts with doctor info missing, fallback to empty doctor
-        # This is a backward compatibility step; existing data won't have doctor info per treatment
-        new_patients = []
-        for idx, row in df.iterrows():
-            treatments = []
-            for t in row["treatments"]:
-                if isinstance(t, dict):
-                    treatments.append(t)
-                else:
-                    treatments.append({"name": t, "doctor": ""})
-            new_patients.append({
-                "id": row["id"],
-                "name": row["name"],
-                "age": row["age"],
-                "department": row["department"],
-                "doctor": row.get("doctor", ""),  # legacy field
-                "treatments": treatments,
-                "date": row["date"]
-            })
-        return new_patients
+        df["treatments"] = df["treatments"].apply(lambda x: eval(x) if isinstance(x, str) else x)
+        return df.to_dict(orient="records")
     except FileNotFoundError:
         return []
 
 def save_patients():
     df = pd.DataFrame(st.session_state.patients)
     if not df.empty:
-        # Convert treatments list of dicts to string format for saving
-        def treatments_to_str(treatments):
-            if isinstance(treatments, list):
-                return "|".join(t.get("name", "") for t in treatments if isinstance(t, dict))
-            return str(treatments)
-        df["treatments"] = df["treatments"].apply(treatments_to_str)
+        df["treatments"] = df["treatments"].apply(lambda x: str(x))
         df.to_csv(DATA_FILE, index=False)
 
 if "patients" not in st.session_state:
@@ -268,7 +244,7 @@ if tab == "Register":
             if existing:
                 existing.update({
                     "age": age, "department": dept, "doctor": doc,
-                    "treatments": [{"name": t, "doctor": doc} for t in treat],
+                    "treatments": [{"name": t, "doctor": doc, "department": dept} for t in treat],
                     "date": datetime.date.today().isoformat()
                 })
                 st.success(f"Patient {name} updated successfully!")
@@ -276,7 +252,7 @@ if tab == "Register":
             else:
                 st.session_state.patients.insert(0, {
                     "id": gen_id(), "name": name, "age": age, "department": dept,
-                    "doctor": doc, "treatments": [{"name": t, "doctor": doc} for t in treat],
+                    "doctor": doc, "treatments": [{"name": t, "doctor": doc, "department": dept} for t in treat],
                     "date": datetime.date.today().isoformat()
                 })
                 st.success(f"New patient {name} registered successfully!")
@@ -323,26 +299,26 @@ elif tab=="History":
 # ========= Doctor Dashboard =========
 elif tab=="Doctor Dashboard":
     st.subheader("Doctor Dashboard")
-    df=df_patients()
-    if df.empty: st.info("No data yet.")
+    df = df_patients()
+    if df.empty:
+        st.info("No data yet.")
     else:
-        doc_sel=st.selectbox("Select Doctor",sorted(df["doctor"].unique()))
-        df_doc=df[df["doctor"]==doc_sel]
-        total_cases=len(df_doc)
-        revenue=int(df_doc["Total"].sum())
-        st.metric("Total Cases",total_cases)
-        st.metric("Total Revenue (₹)",revenue)
-        st.bar_chart(df_doc["treatment"].value_counts())
+        doctor_summary = df.groupby(["doctor","department"]).agg(Cases=("treatment","count"),Revenue=("cost","sum")).reset_index()
+        doctor_sel = st.selectbox("Select Doctor", sorted(doctor_summary["doctor"].unique()))
+        df_doc = doctor_summary[doctor_summary["doctor"] == doctor_sel]
+        st.dataframe(df_doc, use_container_width=True)
+        st.bar_chart(df_doc.set_index("department")[["Cases","Revenue"]])
 
 # ========= Department Dashboard =========
 elif tab=="Department Dashboard":
     st.subheader("Department Dashboard")
-    df=df_patients()
-    if df.empty: st.info("No data yet.")
+    df = df_patients()
+    if df.empty:
+        st.info("No data yet.")
     else:
-        df_sum=df.groupby("department").agg(Cases=("id","count"),Revenue=("cost","sum"))
-        st.bar_chart(df_sum)
-        st.dataframe(df_sum)
+        dept_summary = df.groupby("department").agg(Cases=("treatment","count"),Revenue=("cost","sum")).reset_index()
+        st.dataframe(dept_summary, use_container_width=True)
+        st.bar_chart(dept_summary.set_index("department")[["Cases","Revenue"]])
 
 # ========= Diagnostics =========
 elif tab=="Diagnostics":
