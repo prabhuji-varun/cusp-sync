@@ -196,10 +196,17 @@ elif tab=="History":
         st.download_button("📊 Download Excel",bio.getvalue(),
             "patient_history.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         # PDF
-        pdf=FPDF(); pdf.add_page(); pdf.set_font("Arial",size=12)
-        for _,r in df.iterrows():
-            pdf.multi_cell(0,8,f"{r['id']} — {r['name']} ({r['department']}) ₹{r['Total']}")
-        st.download_button("🖨 Download PDF",pdf.output(dest="S").encode("latin1"),"patient_history.pdf")
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Helvetica", size=12)
+
+        for _, r in df.iterrows():
+            # Replace special characters with ASCII-safe equivalents
+            line = f"{r['id']} - {r['name']} ({r['department']}) Rs. {r['Total']}"
+            pdf.multi_cell(0, 8, line)
+
+        pdf_bytes = pdf.output(dest="S").encode("latin1", "ignore")
+        st.download_button("🖨 Download PDF", pdf_bytes, "patient_history.pdf")
 
 # ========= Doctor Dashboard =========
 elif tab=="Doctor Dashboard":
