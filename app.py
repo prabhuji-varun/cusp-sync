@@ -199,7 +199,7 @@ inst = st.session_state.institute
 
 if inst is not None:
     if inst.get("banner"):
-        st.image(io.BytesIO(base64.b64decode(inst["banner"])), use_column_width=True)
+        st.image(io.BytesIO(base64.b64decode(inst["banner"])), use_container_width=True)
     st.title(f"🏥 {inst.get('name', '')}")
     st.caption(inst.get("address", ''))
 else:
