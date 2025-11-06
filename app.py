@@ -274,12 +274,11 @@ elif tab=="History":
 
         from fpdf import FPDF
 
-        # PDF generation with Unicode-safe font and margins
+        # PDF generation with built-in font and margins (no external font file required)
         pdf = FPDF()
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
-        pdf.add_font("HeiseiKakuGo-W5", "", fname=None, uni=True)
-        pdf.set_font("HeiseiKakuGo-W5", size=12)
+        pdf.set_font("Helvetica", size=12)
         pdf.set_left_margin(10)
         pdf.set_right_margin(10)
 
