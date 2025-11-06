@@ -242,21 +242,25 @@ if tab == "Register":
             st.error("Please fill all required fields.")
         else:
             if existing:
-                existing.update({
-                    "age": age, "department": dept, "doctor": doc,
+                # Append new visit record instead of overwriting previous treatments
+                new_treatments = [{"name": t, "doctor": doc, "department": dept} for t in treat]
+                existing["treatments"].extend(new_treatments)
+                existing["date"] = datetime.date.today().isoformat()
+                st.success(f"Added new treatments for existing patient {name}.")
+            else:
+                # Create new patient record
+                st.session_state.patients.insert(0, {
+                    "id": gen_id(),
+                    "name": name,
+                    "age": age,
+                    "department": dept,
+                    "doctor": doc,
                     "treatments": [{"name": t, "doctor": doc, "department": dept} for t in treat],
                     "date": datetime.date.today().isoformat()
                 })
-                st.success(f"Patient {name} updated successfully!")
-                save_patients()
-            else:
-                st.session_state.patients.insert(0, {
-                    "id": gen_id(), "name": name, "age": age, "department": dept,
-                    "doctor": doc, "treatments": [{"name": t, "doctor": doc, "department": dept} for t in treat],
-                    "date": datetime.date.today().isoformat()
-                })
                 st.success(f"New patient {name} registered successfully!")
-                save_patients()
+
+            save_patients()
 
 # ========= History =========
 elif tab=="History":
