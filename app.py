@@ -168,39 +168,45 @@ else:
     st.stop()
 
 # ========= Register =========
-if tab=="Register":
+if tab == "Register":
     st.subheader("Register / Follow-up Patient")
-    with st.form("register"):
-        pid = st.text_input("Patient ID (Leave blank for new patient)")
-        existing = next((p for p in st.session_state.patients if p["id"] == pid), None) if pid else None
 
-        if existing:
-            st.info(f"Existing patient found: {existing['name']}")
-            name = st.text_input("Patient Name", value=existing["name"])
-            age = st.number_input("Age", 0, 120, value=int(existing["age"]))
-            dept = st.selectbox("Department", DEPARTMENTS, index=DEPARTMENTS.index(existing["department"]) if existing["department"] in DEPARTMENTS else 0)
-        else:
-            name = st.text_input("Patient Name")
-            age = st.number_input("Age", 0, 120, 25)
-            dept = st.selectbox("Department", DEPARTMENTS)
+    # --- Step 1: Enter Patient ID ---
+    pid = st.text_input("Patient ID (Leave blank for new patient)")
+    existing = next((p for p in st.session_state.patients if p["id"] == pid), None) if pid else None
 
-        # Dynamically update doctor and treatment lists based on department
-        doc_list = DOCTORS[dept]
-        doc_index = doc_list.index(existing["doctor"]) if existing and existing["doctor"] in doc_list else 0
-        doc = st.selectbox("Doctor", doc_list, index=doc_index)
+    # --- Step 2: Autofill patient info if found ---
+    if existing:
+        st.info(f"Existing patient found: {existing['name']}")
+        name = st.text_input("Patient Name", value=existing["name"])
+        age = st.number_input("Age", 0, 120, value=int(existing["age"]))
+    else:
+        name = st.text_input("Patient Name")
+        age = st.number_input("Age", 0, 120, 25)
 
-        treat_list = DEPARTMENT_TREATMENTS[dept]
-        treat_default = [t for t in (existing["treatments"] if existing else []) if t in treat_list]
-        treat = st.multiselect("Treatments", treat_list, default=treat_default)
+    # --- Step 3: Select department (live update) ---
+    dept = st.selectbox("Department", DEPARTMENTS, key="dept_live")
 
-        submit = st.form_submit_button("Register / Route")
+    # --- Step 4: Doctor dropdown dynamically updates ---
+    doc_list = DOCTORS[dept]
+    default_doc = existing["doctor"] if existing and existing["doctor"] in doc_list else doc_list[0]
+    doc = st.selectbox("Doctor", doc_list, index=doc_list.index(default_doc), key="doc_live")
 
-    if submit:
+    # --- Step 5: Treatment dropdown dynamically updates ---
+    treat_list = DEPARTMENT_TREATMENTS[dept]
+    treat_default = [t for t in (existing["treatments"] if existing else []) if t in treat_list]
+    treat = st.multiselect("Treatments", treat_list, default=treat_default, key="treat_live")
+
+    # --- Step 6: Register / Update patient ---
+    if st.button("Register / Route"):
         if not (name and doc and treat):
             st.error("Please fill all required fields.")
         else:
             if existing:
-                existing.update({"age": age, "department": dept, "doctor": doc, "treatments": treat, "date": datetime.date.today().isoformat()})
+                existing.update({
+                    "age": age, "department": dept, "doctor": doc, "treatments": treat,
+                    "date": datetime.date.today().isoformat()
+                })
                 st.success(f"Patient {name} updated successfully!")
             else:
                 st.session_state.patients.insert(0, {
