@@ -175,13 +175,19 @@ if tab=="Register":
             age = st.number_input("Age", 0, 120, value=int(existing["age"]))
             dept = st.selectbox("Department", DEPARTMENTS, index=DEPARTMENTS.index(existing["department"]))
             doc = st.selectbox("Doctor", DOCTORS[dept], index=DOCTORS[dept].index(existing["doctor"]))
-            treat = st.multiselect("Treatments", DEPARTMENT_TREATMENTS[dept], default=existing["treatments"])
         else:
             name = st.text_input("Patient Name")
             age = st.number_input("Age", 0, 120, 25)
             dept = st.selectbox("Department", DEPARTMENTS)
             doc = st.selectbox("Doctor", DOCTORS[dept])
-            treat = st.multiselect("Treatments", DEPARTMENT_TREATMENTS[dept])
+
+        # Dynamically update treatment options based on department and retain selections if department matches existing
+        treat_list = DEPARTMENT_TREATMENTS[dept]
+        if existing and existing["department"] == dept:
+            treat_default = [t for t in existing["treatments"] if t in treat_list]
+        else:
+            treat_default = []
+        treat = st.multiselect("Treatments", treat_list, default=treat_default)
 
         submit = st.form_submit_button("Register / Route")
 
