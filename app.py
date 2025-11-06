@@ -321,26 +321,6 @@ elif tab=="Doctor Dashboard":
         st.dataframe(df_doc, use_container_width=True)
         st.bar_chart(df_doc.set_index("department")[["Cases","Revenue"]])
 
-        bio = io.BytesIO()
-        with pd.ExcelWriter(bio, engine="openpyxl") as w:
-            df_doc.to_excel(w, index=False)
-        st.download_button("📊 Download Excel", bio.getvalue(),
-                           "doctor_dashboard.xlsx",
-                           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-        pdf.add_font("HeiseiKakuGo-W5", "", fname=None, uni=True)
-        pdf.set_font("HeiseiKakuGo-W5", size=12)
-        for _, r in df_doc.iterrows():
-            line = " | ".join([f"{col}: {r[col]}" for col in df_doc.columns])
-            pdf.multi_cell(0, 8, line)
-        pdf_bytes = pdf.output(dest="S").encode("latin1", "replace")
-        st.download_button("🖨 Download PDF", data=pdf_bytes,
-                           file_name="doctor_dashboard.pdf",
-                           mime="application/pdf")
-
 # ========= Department Dashboard =========
 elif tab=="Department Dashboard":
     st.subheader("Department Dashboard")
@@ -351,26 +331,6 @@ elif tab=="Department Dashboard":
         dept_summary = df.groupby("department").agg(Cases=("treatment","count"),Revenue=("cost","sum")).reset_index()
         st.dataframe(dept_summary, use_container_width=True)
         st.bar_chart(dept_summary.set_index("department")[["Cases","Revenue"]])
-
-        bio = io.BytesIO()
-        with pd.ExcelWriter(bio, engine="openpyxl") as w:
-            dept_summary.to_excel(w, index=False)
-        st.download_button("📊 Download Excel", bio.getvalue(),
-                           "department_dashboard.xlsx",
-                           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-        pdf.add_font("HeiseiKakuGo-W5", "", fname=None, uni=True)
-        pdf.set_font("HeiseiKakuGo-W5", size=12)
-        for _, r in dept_summary.iterrows():
-            line = " | ".join([f"{col}: {r[col]}" for col in dept_summary.columns])
-            pdf.multi_cell(0, 8, line)
-        pdf_bytes = pdf.output(dest="S").encode("latin1", "replace")
-        st.download_button("🖨 Download PDF", data=pdf_bytes,
-                           file_name="department_dashboard.pdf",
-                           mime="application/pdf")
 
 # ========= Diagnostics =========
 elif tab=="Diagnostics":
